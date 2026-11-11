@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tu tablero de Buen Fin con Claude · Operando Marcas</title>
+<meta name="description" content="Responde unas preguntas sobre tu tienda y te damos tu ROAS de piso, tu ROAS objetivo y el prompt para que Claude te arme un tablero de ventas contra meta.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300;0,500;0,600;0,700;1,600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--papel:#FFFFFF;--niebla:#F0F1F2;--tinta:#111214;--grafito:#4B4C4F;--gris:#6B6D71;--linea:#DCDDE0;--azul:#3257E9;--azul-2:#2443C2}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0;background:var(--papel);color:var(--tinta);font:500 16px/1.5 "Inter Tight",Arial,sans-serif}
+h1,h2,h3{font-family:"Inter Tight",Arial,sans-serif;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:0;color:var(--tinta)}
+h1 i,h2 i,h3 i{font-weight:600}
+.blue{color:var(--azul)}
+p{margin:0}
+a{color:inherit}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--gris)}
+.topbar{max-width:880px;margin:0 auto;padding:22px 20px 0;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.topbar .brand{color:var(--tinta)}
+.hero{padding:44px 20px 36px}
+.hero .in{max-width:880px;margin:0 auto}
+.hero h1{font-size:clamp(34px,6.2vw,60px);line-height:1.04;margin:14px 0 16px}
+.hero p.lead{font-size:19px;max-width:660px;color:var(--grafito)}
+.hero .meta{margin-top:18px}
+.wrap{max-width:880px;margin:0 auto;padding:0 20px 72px}
+.card{background:var(--papel);border:1px solid var(--linea);border-radius:12px;padding:32px}
+.progress{display:flex;gap:6px;margin-bottom:24px}
+.progress i{flex:1;height:3px;border-radius:2px;background:var(--linea)}
+.progress i.on{background:var(--tinta)}
+.step h2{font-size:30px;margin:8px 0 6px}
+.step .why{color:var(--grafito);margin-bottom:24px}
+.field{margin-bottom:22px}
+.field>label,.field>.lab{display:block;font-weight:600;margin-bottom:8px;color:var(--tinta)}
+.field>label span{font-weight:500}
+.hint{font-size:14px;color:var(--gris);margin-top:6px}
+input[type=text],input[type=number],input[type=date],input[type=url]{font:inherit;width:100%;padding:12px 14px;border:1px solid var(--linea);border-radius:8px;background:var(--papel);color:var(--tinta)}
+input:focus{outline:none;border-color:var(--azul)}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt span{display:inline-block;padding:10px 16px;border:1px solid var(--linea);border-radius:8px;background:var(--papel);cursor:pointer;font-weight:500;user-select:none;color:var(--grafito)}
+.opt input:checked+span{background:var(--niebla);color:var(--tinta);border-color:var(--tinta);font-weight:600}
+.opt input:focus-visible+span{outline:2px solid var(--azul);outline-offset:2px}
+.prefix,.suffix{position:relative}
+.prefix b,.suffix b{position:absolute;top:50%;transform:translateY(-50%);color:var(--gris);font-weight:500}
+.prefix b{left:14px}.prefix input{padding-left:30px}
+.suffix b{right:14px}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:28px}
+button{font:inherit;font-weight:600;border-radius:8px;padding:13px 22px;cursor:pointer;border:1px solid var(--azul)}
+.btn{background:var(--azul);color:#fff}
+.btn:hover{background:var(--azul-2);border-color:var(--azul-2)}
+.btn-ghost{background:transparent;color:var(--tinta);border-color:var(--linea)}
+.btn-ghost:hover{border-color:var(--tinta)}
+button:disabled{opacity:.45;cursor:default}
+.err{color:var(--tinta);font-weight:600;font-size:14px;margin-top:10px;min-height:1em}
+.hidden{display:none!important}
+/* Resultados */
+.res h2{font-size:34px;margin:8px 0 6px}
+.res .sub{color:var(--grafito);margin-bottom:24px}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:20px 0}
+.num{background:var(--niebla);border-radius:12px;padding:20px}
+.num .l{font-family:"IBM Plex Mono",monospace;font-weight:500;text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--gris)}
+.num .v{font-weight:300;font-size:46px;line-height:1.05;letter-spacing:-.03em;margin-top:8px;color:var(--gris);font-variant-numeric:tabular-nums}
+.num .s{font-size:14px;color:var(--grafito);margin-top:6px}
+.num.dark .v{color:var(--tinta)}
+.callout,.honest{background:var(--niebla);border-radius:12px;padding:16px 18px;margin:16px 0;color:var(--tinta)}
+.callout::before,.honest::before{display:block;font-family:"IBM Plex Mono",monospace;font-weight:500;text-transform:uppercase;letter-spacing:.1em;font-size:12px;margin-bottom:6px}
+.callout::before{content:"Dato";color:var(--azul-2)}
+.honest::before{content:"Ojo";color:var(--gris)}
+.honest b{color:var(--tinta)}
+.sec{margin-top:40px;padding-top:28px;border-top:1px solid var(--linea)}
+.sec h3{font-size:24px;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--linea);vertical-align:top}
+td{color:var(--grafito)}
+td b{color:var(--tinta)}
+th{font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--gris)}
+td.r,th.r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pill{font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);white-space:nowrap}
+.pill.live{color:var(--azul-2)}
+.pill.manual{color:var(--tinta)}
+ol.steps{padding-left:22px;margin:10px 0;color:var(--grafito)}
+ol.steps li{margin-bottom:10px}
+ol.steps b{color:var(--tinta)}
+textarea{width:100%;min-height:340px;font:13px/1.55 "IBM Plex Mono",ui-monospace,monospace;padding:16px;border:1px solid var(--linea);border-radius:8px;background:var(--niebla);color:var(--tinta);resize:vertical}
+.copyrow{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.ok{color:var(--azul-2);font-weight:600}
+.cta{background:var(--niebla);border-radius:12px;padding:32px;margin-top:40px}
+.cta h3{font-size:30px}
+.cta p{color:var(--grafito);margin:10px 0 20px;max-width:620px}
+.cta a.btn{display:inline-block;text-decoration:none;font-weight:600;border-radius:8px;padding:13px 22px}
+footer{max-width:880px;margin:0 auto;padding:24px 20px 44px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+footer .rule{width:80px;height:1px;background:var(--linea)}
+footer p{font-size:13px;color:var(--gris);flex:1;min-width:240px}
+@media (max-width:560px){.card{padding:22px}.step h2{font-size:26px}.res h2{font-size:28px}.cta{padding:24px}}
+</style>
+</head>
+<body>
+
+<div class="topbar"><span class="mono brand">Operando Marcas</span><span class="mono">Tablero Buen Fin · 2026</span></div>
+<header class="hero">
+  <div class="in">
+    <h1>¿Tu Buen Fin va arriba o abajo de tu <span class="blue">meta?</span></h1>
+    <p class="lead">Contesta 6 bloques de preguntas sobre tu tienda (unos 5 minutos). Te damos tu ROAS de piso, tu ROAS objetivo y un prompt para que Claude te arme un tablero de ventas reales contra tu meta, con lo que ya tienes conectado.</p>
+    <p class="mono meta">Sin apps de paga · Funciona en Claude normal</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="card" id="wizard">
+    <div class="progress" id="progress"></div>
+    <form id="form" novalidate>
+
+      <section class="step" data-step="0">
+        <div class="mono">Paso 1 de 6</div>
+        <h2>Tu tienda</h2>
+        <p class="why">Con esto Claude sabe de dónde jalar tus ventas.</p>
+        <div class="field"><label for="marca">Nombre de tu marca</label><input type="text" id="marca" name="marca" placeholder="Ej. Casa Luma" autocomplete="organization"></div>
+        <div class="field"><div class="lab">¿En qué plataforma está tu tienda en línea?</div>
+          <div class="opts">
+            <label class="opt"><input type="radio" name="plataforma" value="Shopify" checked><span>Shopify</span></label>
+            <label class="opt"><input type="radio" name="plataforma" value="Tiendanube"><span>Tiendanube</span></label>
+            <label class="opt"><input type="radio" name="plataforma" value="WooCommerce"><span>WooCommerce</span></label>
+            <label class="opt"><input type="radio" name="plataforma" value="Otra"><span>Otra</span></label>
+          </div>
+        </div>
+        <div class="field"><label for="url">Página de tu tienda <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><input type="url" id="url" name="url" placeholder="https://"></div>
+      </section>
+
+      <section class="step hidden" data-step="1">
+        <div class="mono">Paso 2 de 6</div>
+        <h2>¿Dónde más vendes?</h2>
+        <p class="why">Tu meta suma todos tus canales, pero el ROAS de Meta solo se mide contra tu tienda en línea. Si los mezclas, el ROAS se ve mejor de lo que es.</p>
+        <div class="field"><div class="lab">Marca todos los que apliquen (o ninguno)</div>
+          <div class="opts" id="canales">
+            <label class="opt"><input type="checkbox" name="canales" value="TikTok Shop"><span>TikTok Shop</span></label>
+            <label class="opt"><input type="checkbox" name="canales" value="Mercado Libre"><span>Mercado Libre</span></label>
+            <label class="opt"><input type="checkbox" name="canales" value="Amazon"><span>Amazon</span></label>
+            <label class="opt"><input type="checkbox" name="canales" value="Tienda física"><span>Tienda física</span></label>
+            <label class="opt"><input type="checkbox" name="canales" value="WhatsApp o DM"><span>WhatsApp o DM</span></label>
+            <label class="opt"><input type="checkbox" name="canales" value="Mayoreo"><span>Mayoreo</span></label>
+          </div>
+        </div>
+        <div class="field hidden" id="f-online"><label for="online">¿Qué parte de tu venta viene de tu tienda en línea?</label>
+          <div class="suffix" style="max-width:220px"><input type="number" id="online" name="online" value="75" min="1" max="100"><b>%</b></div>
+          <p class="hint">Un aproximado está bien. Claude lo corrige con tus datos reales.</p>
+        </div>
+      </section>
+
+      <section class="step hidden" data-step="2">
+        <div class="mono">Paso 3 de 6</div>
+        <h2>Tu meta</h2>
+        <p class="why">La meta total del evento, con IVA, sumando todos tus canales. Claude la reparte por día.</p>
+        <div class="row2">
+          <div class="field"><label for="inicio">Empieza</label><input type="date" id="inicio" name="inicio" value="2026-11-13"></div>
+          <div class="field"><label for="fin">Termina</label><input type="date" id="fin" name="fin" value="2026-11-17"></div>
+        </div>
+        <div class="field"><label for="meta">Meta de venta del evento (con IVA)</label><div class="prefix"><b>$</b><input type="number" id="meta" name="meta" placeholder="Ej. 500000" min="0" step="1000"></div></div>
+        <div class="field"><label for="ly">¿Cuánto vendiste en el Buen Fin 2025? <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><div class="prefix"><b>$</b><input type="number" id="ly" name="ly" placeholder="Si no sabes, déjalo vacío" min="0" step="1000"></div>
+          <p class="hint">Sirve para checar si tu meta es realista antes de arrancar.</p></div>
+      </section>
+
+      <section class="step hidden" data-step="3">
+        <div class="mono">Paso 4 de 6</div>
+        <h2>Tu pauta</h2>
+        <p class="why">El tablero compara lo que gastas contra lo que vendes, día por día.</p>
+        <div class="field"><div class="lab">¿Dónde vas a pautar en Buen Fin?</div>
+          <div class="opts">
+            <label class="opt"><input type="checkbox" name="pauta" value="Meta" checked><span>Meta (Facebook e Instagram)</span></label>
+            <label class="opt"><input type="checkbox" name="pauta" value="TikTok Ads"><span>TikTok Ads</span></label>
+            <label class="opt"><input type="checkbox" name="pauta" value="Google Ads"><span>Google Ads</span></label>
+          </div>
+        </div>
+        <div class="field"><label for="budget">¿Cuánto planeas gastar en Meta durante el evento? <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><div class="prefix"><b>$</b><input type="number" id="budget" name="budget" placeholder="Ej. 60000" min="0" step="1000"></div>
+          <p class="hint">Te decimos si tu presupuesto cabe en tus números.</p></div>
+      </section>
+
+      <section class="step hidden" data-step="4">
+        <div class="mono">Paso 5 de 6</div>
+        <h2>Tu margen</h2>
+        <p class="why">Aquí sale tu ROAS de piso: el mínimo para no perder dinero en cada venta que traen tus anuncios. No necesitas el costo de cada producto: con un promedio alcanza.</p>
+        <div class="row2">
+          <div class="field"><label for="ticket">Ticket promedio normal (con IVA)</label><div class="prefix"><b>$</b><input type="number" id="ticket" name="ticket" placeholder="Ej. 900" min="1"></div><p class="hint">Lo que gasta un cliente por pedido, sin promoción.</p></div>
+          <div class="field"><label for="costo">Costo del producto</label><div class="suffix"><input type="number" id="costo" name="costo" value="35" min="0" max="100"><b>% del precio</b></div><p class="hint">Si tu producto vale $1,000 y te cuesta $350, es 35%.</p></div>
+        </div>
+        <div class="field"><div class="lab">¿Dónde tienes tus costos por producto?</div>
+          <div class="opts">
+            <label class="opt"><input type="radio" name="costos" value="shopify" checked><span>Los tengo en mi tienda</span></label>
+            <label class="opt"><input type="radio" name="costos" value="archivo"><span>En un Excel o archivo</span></label>
+            <label class="opt"><input type="radio" name="costos" value="porcentaje"><span>Solo sé el % aproximado</span></label>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="envio">Envío que pagas tú por pedido</label><div class="prefix"><b>$</b><input type="number" id="envio" name="envio" value="0" min="0"></div><p class="hint">Si el cliente paga el envío, pon 0.</p></div>
+          <div class="field"><label for="pasarela">Comisión de pasarela de pago</label><div class="suffix"><input type="number" id="pasarela" name="pasarela" value="3.5" min="0" max="20" step="0.1"><b>%</b></div></div>
+          <div class="field"><label for="desc">Descuento promedio en Buen Fin</label><div class="suffix"><input type="number" id="desc" name="desc" value="20" min="0" max="90"><b>%</b></div></div>
+          <div class="field"><label for="util">Utilidad que quieres después de anuncios</label><div class="suffix"><input type="number" id="util" name="util" value="10" min="0" max="80"><b>%</b></div><p class="hint">10% es un buen punto de partida si no sabes.</p></div>
+        </div>
+      </section>
+
+      <section class="step hidden" data-step="5">
+        <div class="mono">Paso 6 de 6</div>
+        <h2>Tu Claude</h2>
+        <p class="why">Cambia cómo se actualiza tu tablero.</p>
+        <div class="field"><div class="lab">¿Qué plan de Claude tienes?</div>
+          <div class="opts">
+            <label class="opt"><input type="radio" name="plan" value="pago" checked><span>Pro, Max o Team</span></label>
+            <label class="opt"><input type="radio" name="plan" value="gratis"><span>Gratis</span></label>
+            <label class="opt"><input type="radio" name="plan" value="nose"><span>No sé</span></label>
+          </div>
+          <p class="hint">Con plan de paga, el tablero jala tus datos solo cada vez que lo abres. Con el gratis, le pides a Claude que lo actualice en el chat.</p>
+        </div>
+      </section>
+
+      <div class="err" id="err" role="alert"></div>
+      <div class="nav">
+        <button type="button" class="btn-ghost" id="back">Atrás</button>
+        <button type="button" class="btn" id="next">Siguiente</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card res hidden" id="results" aria-live="polite"></div>
+</main>
+
+<footer><span class="rule"></span><span class="mono">Lilo Domit · Operando Marcas</span><p>Las cifras son estimaciones con tus datos. Revísalas con tu contador antes de decisiones grandes.</p></footer>
+
+<script>
+// ===== Configuración (edita aquí) =====
+const COMMUNITY_URL = "#"; // TODO: link al free trial de Operando Marcas
+const IVA = 0.16;
+
+// ===== Utilidades =====
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const money = n => n == null || !isFinite(n) ? "—" : "$" + Math.round(n).toLocaleString("es-MX");
+const x2 = n => n == null || !isFinite(n) ? "—" : n.toFixed(2) + "x";
+const pct = n => n == null || !isFinite(n) ? "—" : (Math.round(n * 1000) / 10) + "%";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const DOW = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+
+const steps = $$(".step");
+let cur = 0;
+
+function val(name){
+  const els = $$(`[name="${name}"]`);
+  if (!els.length) return null;
+  if (els[0].type === "checkbox") return els.filter(e => e.checked).map(e => e.value);
+  if (els[0].type === "radio") return (els.find(e => e.checked) || {}).value || null;
+  return els[0].value.trim();
+}
+const num = name => { const v = parseFloat(val(name)); return isFinite(v) ? v : null; };
+
+function drawProgress(){
+  $("#progress").innerHTML = steps.map((_, i) => `<i class="${i <= cur ? "on" : ""}"></i>`).join("");
+}
+function show(i){
+  steps.forEach((s, k) => s.classList.toggle("hidden", k !== i));
+  cur = i; drawProgress();
+  $("#back").style.visibility = i === 0 ? "hidden" : "visible";
+  $("#next").textContent = i === steps.length - 1 ? "Ver mis números y mi prompt" : "Siguiente";
+  $("#err").textContent = "";
+  save();
+}
+function validate(i){
+  if (i === 0 && !val("marca")) return "Escribe el nombre de tu marca.";
+  if (i === 2) {
+    const a = val("inicio"), b = val("fin");
+    if (!a || !b || b < a) return "Revisa las fechas: el final no puede ser antes del inicio.";
+    if (!(num("meta") > 0)) return "Escribe tu meta de venta del evento.";
+  }
+  if (i === 4) {
+    if (!(num("ticket") > 0)) return "Escribe tu ticket promedio.";
+    if (num("costo") == null) return "Escribe el costo de tu producto como % del precio.";
+  }
+  return "";
+}
+
+$("#next").addEventListener("click", () => {
+  const e = validate(cur);
+  if (e) { $("#err").textContent = e; return; }
+  if (cur < steps.length - 1) { show(cur + 1); window.scrollTo({ top: $("#wizard").offsetTop - 20, behavior: "smooth" }); }
+  else renderResults();
+});
+$("#back").addEventListener("click", () => { if (cur > 0) show(cur - 1); });
+$$('[name="canales"]').forEach(c => c.addEventListener("change", () => $("#f-online").classList.toggle("hidden", !val("canales").length)));
+$("#form").addEventListener("submit", e => e.preventDefault());
+
+// Guardar borrador en este navegador
+const FIELDS = ["marca","plataforma","url","canales","online","inicio","fin","meta","ly","pauta","budget","ticket","costo","costos","envio","pasarela","desc","util","plan"];
+function save(){
+  try { const o = {}; FIELDS.forEach(f => o[f] = val(f)); localStorage.setItem("om-tablero-bf", JSON.stringify(o)); } catch(e){}
+}
+function load(){
+  try {
+    const o = JSON.parse(localStorage.getItem("om-tablero-bf") || "null"); if (!o) return;
+    FIELDS.forEach(f => {
+      const els = $$(`[name="${f}"]`); if (!els.length || o[f] == null) return;
+      if (els[0].type === "checkbox") els.forEach(e => e.checked = o[f].includes(e.value));
+      else if (els[0].type === "radio") els.forEach(e => e.checked = e.value === o[f]);
+      else els[0].value = o[f];
+    });
+    $("#f-online").classList.toggle("hidden", !val("canales").length);
+  } catch(e){}
+}
+document.addEventListener("input", save);
+
+// ===== Cálculos =====
+function margin(P, c, g, e, d){
+  const paid = P * (1 - d), net = paid / (1 + IVA);
+  const contrib = net - c * P / (1 + IVA) - g * paid - e;
+  return { net, contrib, m: contrib / net };
+}
+function days(a, b){
+  const out = []; const t = new Date(a + "T12:00:00"), end = new Date(b + "T12:00:00");
+  while (t <= end) { out.push(t.toISOString().slice(0, 10)); t.setDate(t.getDate() + 1); }
+  return out;
+}
+// Curva típica de Buen Fin: arranque fuerte, valle a mitad, repunte al cierre.
+function weights(n){
+  if (n === 1) return [1];
+  return Array.from({ length: n }, (_, i) => i === 0 ? 1.6 : i === n - 1 ? 1.45 : i === n - 2 ? 1.15 : 1);
+}
+
+function compute(){
+  const A = {};
+  FIELDS.forEach(f => A[f] = val(f));
+  const P = num("ticket"), c = (num("costo") || 0) / 100, g = (num("pasarela") || 0) / 100, e = num("envio") || 0;
+  const d = (num("desc") || 0) / 100, u = (num("util") || 0) / 100;
+  const full = margin(P, c, g, e, 0), promo = margin(P, c, g, e, d);
+  const piso = promo.m > 0 ? 1 / promo.m : null;
+  const piso0 = full.m > 0 ? 1 / full.m : null;
+  const obj = promo.m - u > 0 ? 1 / (promo.m - u) : null;
+  const meta = num("meta"), canales = A.canales || [];
+  const onlineShare = canales.length ? Math.min(1, Math.max(0.01, (num("online") || 100) / 100)) : 1;
+  const onlineNet = meta * onlineShare / (1 + IVA);
+  const maxSpend = piso ? onlineNet / piso : null;
+  const objSpend = obj ? onlineNet / obj : null;
+  const ds = days(A.inicio, A.fin), w = weights(ds.length), wsum = w.reduce((s, v) => s + v, 0);
+  const daily = ds.map((dd, i) => ({ d: dd, dow: DOW[new Date(dd + "T12:00:00").getDay()], meta: Math.round(meta * w[i] / wsum / 100) * 100 }));
+  if (daily.length) daily[daily.length - 1].meta += meta - daily.reduce((s, x) => s + x.meta, 0); // que sume exacto
+  return { A, P, c, g, e, d, u, full, promo, piso, piso0, obj, meta, canales, onlineShare, onlineNet, maxSpend, objSpend, daily,
+    budget: num("budget"), ly: num("ly"), pauta: A.pauta || [] };
+}
+
+// ===== Plan de conexión =====
+function connectionPlan(R){
+  const plat = R.A.plataforma, live = R.A.plan !== "gratis";
+  const rows = [];
+  if (plat === "Shopify") rows.push({ q: "Ventas de tu tienda, canales, clientes nuevos y fuentes", how: "Conector oficial de Shopify en Claude (Personalizar → Conectores → Shopify).", live: live });
+  else rows.push({ q: `Ventas de tu tienda (${plat})`, how: plat === "Tiendanube" ? "Exporta tus ventas desde el admin de Tiendanube (Ventas → Exportar) y sube el archivo al proyecto. No encontramos un conector oficial de Tiendanube para Claude." : plat === "WooCommerce" ? "Exporta tus pedidos desde WooCommerce (Pedidos → Exportar) y súbelos al proyecto." : "Exporta tus pedidos de tu plataforma y súbelos al proyecto.", live: false });
+  if (R.pauta.includes("Meta")) rows.push({ q: "Gasto en Meta", how: "Conector oficial de Meta Ads (está en beta y no todas las cuentas tienen acceso). Plan B: exporta el reporte de Ads Manager por día o manda captura.", live: live });
+  if (R.pauta.includes("TikTok Ads")) rows.push({ q: "Gasto en TikTok Ads", how: "Conector oficial TikTok for Business (pide plan Pro o Max). Plan B: export o captura.", live: live && R.A.plan === "pago" });
+  if (R.pauta.includes("Google Ads")) rows.push({ q: "Gasto en Google Ads", how: "Export o captura del reporte por día.", live: false });
+  const shop = plat === "Shopify";
+  for (const ch of R.canales) {
+    const m = {
+      "TikTok Shop": shop ? "Primero Claude revisa si ya llega a Shopify (con la app de TikTok sí llega). Si no, export del Seller Center." : "Export del Seller Center de TikTok Shop.",
+      "Mercado Libre": "Export de ventas de Mercado Libre. No encontramos conector oficial para Claude.",
+      "Amazon": "Export del reporte de pedidos de Seller Central.",
+      "Tienda física": shop ? "Si usas Shopify POS, ya está en Shopify. Si no, escribe el total del día en el chat." : "Escribe el total del día en el chat.",
+      "WhatsApp o DM": "Una línea al día en el chat: número de pedidos y monto (si no los capturas en tu tienda).",
+      "Mayoreo": "Escribe en el chat los pedidos de mayoreo cuando entren.",
+    }[ch];
+    const isLive = shop && live && (ch === "TikTok Shop" || ch === "Tienda física");
+    rows.push({ q: ch, how: m, live: isLive, maybe: isLive });
+  }
+  const cm = { shopify: shop ? "Claude lee el campo \"Costo por artículo\" de tus productos y te dice cuántos lo tienen lleno." : "Exporta tus productos con su costo y súbelos al proyecto.", archivo: "Sube tu Excel o archivo de costos al proyecto.", porcentaje: `Se usa tu ${Math.round(R.c * 100)}% promedio. Si después consigues los costos, Claude afina el cálculo.` };
+  rows.push({ q: "Costo de tus productos", how: cm[R.A.costos] || cm.porcentaje, live: false, fixed: true });
+  return rows;
+}
+
+// ===== Prompt maestro =====
+function buildPrompt(R){
+  const A = R.A, plat = A.plataforma, shop = plat === "Shopify";
+  const live = A.plan !== "gratis";
+  const plan = connectionPlan(R);
+  const canales = R.canales.length ? R.canales.join(", ") : "ninguno, solo tienda en línea";
+  const L = [];
+  L.push(`# Tablero de Buen Fin de ${A.marca}`);
+  L.push("");
+  L.push(`Eres mi analista de e-commerce para el Buen Fin. Tu trabajo: armarme un tablero que compare mis ventas reales contra mi meta y me diga cada día si subo, mantengo o bajo mi gasto en Meta. Háblame claro y en español, sin adornos. Si un dato no lo tienes, dímelo; nunca inventes cifras.`);
+  L.push("");
+  L.push(`## Mi negocio`);
+  L.push(`- Marca: ${A.marca}${A.url ? ` (${A.url})` : ""}`);
+  L.push(`- Tienda en línea: ${plat}`);
+  L.push(`- Otros canales de venta: ${canales}`);
+  if (R.canales.length) L.push(`- Parte de mi venta que viene de la tienda en línea: ${Math.round(R.onlineShare * 100)}% (aproximado; corrígelo con mis datos)`);
+  L.push(`- Pauto en: ${R.pauta.length ? R.pauta.join(", ") : "no pauto"}`);
+  L.push(`- Evento: del ${A.inicio} al ${A.fin}`);
+  L.push(`- Meta de venta del evento: ${money(R.meta)} con IVA, todos los canales`);
+  if (R.ly) L.push(`- Venta del Buen Fin 2025: ${money(R.ly)} con IVA`);
+  if (R.budget) L.push(`- Presupuesto planeado en Meta para el evento: ${money(R.budget)}`);
+  L.push("");
+  L.push(`## Mis números (los calculé antes de empezar)`);
+  L.push(`- Ticket promedio normal: ${money(R.P)} con IVA. Descuento promedio en Buen Fin: ${Math.round(R.d * 100)}%.`);
+  L.push(`- Costo de producto: ${Math.round(R.c * 100)}% del precio normal. Envío que absorbo: ${money(R.e)} por pedido. Pasarela: ${(R.g * 100).toFixed(1)}%.`);
+  L.push(`- Margen de contribución antes de anuncios: ${pct(R.full.m)} a precio normal, ${pct(R.promo.m)} con el descuento de Buen Fin.`);
+  L.push(`- ROAS de piso: ${x2(R.piso)} (punto de equilibrio: abajo de esto, cada peso en Meta pierde dinero).`);
+  L.push(`- ROAS objetivo: ${R.obj ? x2(R.obj) : "no alcanza"} (para quedarme con ${Math.round(R.u * 100)}% de utilidad después de anuncios).`);
+  L.push(`- Estos ROAS son sobre venta SIN IVA. Meta reporta con IVA: el equivalente con IVA es piso ${x2(R.piso * (1 + IVA))} y objetivo ${R.obj ? x2(R.obj * (1 + IVA)) : "—"}.`);
+  L.push(`- Fórmulas: margen = (venta sin IVA − costo de producto − pasarela − envío) ÷ venta sin IVA. Piso = 1 ÷ margen. Objetivo = 1 ÷ (margen − utilidad deseada).`);
+  L.push("");
+  L.push(`Objetivo de venta por día (con IVA, todos los canales; curva típica de Buen Fin):`);
+  R.daily.forEach(x => L.push(`- ${x.d} (${x.dow}): ${money(x.meta)}`));
+  L.push("");
+  L.push(`## Cómo vamos a conectar mis datos`);
+  plan.forEach(p => L.push(`- ${p.q}: ${p.how}`));
+  L.push("");
+  L.push(`## Paso 1 · Revisa mis conexiones (antes de construir nada)`);
+  L.push(`1. Revisa qué conectores tengo activos en esta conversación. Para cada fuente de la lista de arriba, dime si ya está conectada o no.`);
+  L.push(`2. Si falta alguna, dime paso a paso cómo conectarla (dónde dar clic en Claude o qué archivo exportar y de dónde). Espera a que te confirme.`);
+  L.push(`3. Haz una prueba con cada fuente: jala las ventas y el gasto de los últimos 7 días y enséñamelos en una tabla corta para que yo confirme que cuadran con lo que veo en mis plataformas.`);
+  if (shop) L.push(`4. En Shopify revisa las ventas por canal (sales_channel). Dime qué canales ya llegan ahí (por ejemplo TikTok o punto de venta) para no pedirme datos que ya tienes.`);
+  L.push("");
+  L.push(`## Paso 2 · Revisa mis números con datos reales`);
+  if (A.costos === "shopify" && shop) L.push(`- Lee el "costo por artículo" de mis productos. Dime qué % de mis productos más vendidos lo tienen lleno. Si está completo, recalcula mi margen con el costo real ponderado por ventas.`);
+  else if (A.costos === "archivo") L.push(`- Te voy a subir mi archivo de costos. Recalcula mi margen con el costo real ponderado por lo que más vendo.`);
+  else L.push(`- Usa mi costo promedio de ${Math.round(R.c * 100)}%. Si en algún momento te doy costos reales, recalcula.`);
+  L.push(`- Con mis últimos 60 días: calcula mi ticket promedio real y mi ROAS real (venta de la tienda en línea sin IVA ÷ gasto en Meta). Compáralo contra mi ROAS objetivo. Si históricamente estoy muy abajo del objetivo, avísame ANTES del evento.`);
+  L.push(`- Si tienes datos del Buen Fin 2025, compara mi meta contra lo que vendí y usa la forma de esos días para repartir mi meta por día en lugar de la curva típica.`);
+  L.push(`- Si mi meta no es realista con lo que muestran mis datos, dímelo directo y propón una meta alternativa.`);
+  L.push("");
+  L.push(`## Paso 3 · Construye mi tablero`);
+  if (live) {
+    L.push(`Constrúyelo como un artifact que llame a mis conectores cada vez que lo abra, con un botón "Actualizar ahora" y que se refresque solo cada 5 minutos mientras esté abierto. Muestra a qué hora es el último dato. Si una fuente falla o no está conectada, esa sección muestra qué conector falta y cómo agregarlo; el resto del tablero sigue funcionando.`);
+    L.push(`Si en mi plan o mi cuenta no se puede hacer un artifact que llame conectores, dímelo y construye la versión estática con los datos que jales ahora; yo te pediré "actualiza mi tablero" cada día.`);
+  } else {
+    L.push(`Mi plan es gratis, así que construye el tablero como artifact con los datos que jales ahora. Cada vez que te escriba "actualiza mi tablero", vuelve a jalar los datos y regenera el artifact completo.`);
+  }
+  L.push("");
+  L.push(`Secciones, en este orden:`);
+  L.push(`1. Evento vs meta: venta acumulada del evento contra la meta total, con una barra y una línea que marque dónde debería ir a hoy (suma de objetivos de días cerrados + la parte del día de hoy). Muestra el % de pacing y cuánto falta.`);
+  L.push(`2. Hoy vs objetivo del día: venta de hoy, objetivo del día y cuánto debería llevar a esta hora.`);
+  L.push(`3. Cierre proyectado: lo que llevo + los días que faltan al mismo % de cumplimiento que los días cerrados.`);
+  L.push(`4. Meta Ads · ¿subo, mantengo o bajo?: gasto del evento, ROAS de la tienda en línea del evento y de ayer, ROAS de clientes nuevos, piso y objetivo. Regla: si el ROAS de ayer quedó arriba del objetivo → Subir. Entre piso y objetivo → Mantener. Abajo del piso → Bajar. Explica la razón en una línea.`);
+  L.push(`5. Día por día: objetivo, venta real, % del objetivo, gasto de Meta, ROAS de la tienda y semáforo.`);
+  L.push(`6. Venta de hoy por canal.`);
+  L.push(`7. Clientes nuevos vs recurrentes: % de la venta de clientes nuevos en el evento y hoy.`);
+  L.push(`8. ¿De dónde vienen las ventas de la tienda en línea?: agrupa los pedidos por su etiqueta UTM en Anuncios de Meta, Email (Klaviyo, Mailchimp, etc.), WhatsApp, Instagram/Facebook orgánico, Google, TikTok, Influencers y "Sin etiqueta". Muestra monto y %. Si "Sin etiqueta" pasa de 30%, dime que revise que mis anuncios, correos y links lleven UTM.`);
+  L.push("");
+  L.push(`Reglas de cálculo:`);
+  L.push(`- "Venta real" = venta total con IVA de todos mis canales, sin pedidos cancelados.`);
+  L.push(`- ROAS = venta SIN IVA de la tienda en línea ÷ gasto de Meta del mismo día. Nunca sumes otros canales (Mercado Libre, tienda física, TikTok Shop) al ROAS de Meta.`);
+  L.push(`- ROAS de clientes nuevos = venta sin IVA de clientes nuevos en la tienda en línea ÷ gasto de Meta.`);
+  L.push(`- Recalcula piso y objetivo con el acumulado real del evento (ticket real y descuento real) cuando ya haya 2 días cerrados, y avísame si cambiaron.`);
+  if (shop) {
+    L.push("");
+    L.push(`Consultas de Shopify que te sirven (herramienta de analítica con ShopifyQL):`);
+    L.push(`- FROM sales SHOW net_sales, total_sales, orders GROUP BY sales_channel, new_or_returning_customer TIMESERIES day SINCE ${A.inicio} UNTIL today`);
+    L.push(`- FROM sales SHOW total_sales, orders WHERE sales_channel = 'Online Store' GROUP BY order_utm_source, order_utm_medium SINCE ${A.inicio} UNTIL today`);
+    L.push(`(net_sales es sin IVA ni envío; total_sales incluye IVA y envío.)`);
+  }
+  L.push("");
+  L.push(`Diseño: limpio, fácil de leer en el celular, números grandes, verde/amarillo/rojo solo para el semáforo.`);
+  L.push("");
+  L.push(`## Cada día del evento`);
+  L.push(`- Cuando te pregunte "¿cómo vamos?", lee el tablero y dame en 3 líneas: cómo voy contra la meta, qué hago con Meta hoy y una cosa que revisar.`);
+  L.push(`- Si un día cierra abajo del piso, dime qué revisar primero (anuncio, oferta, página o stock) antes de recomendar bajar todo.`);
+  L.push(`- Si cambio mi meta, mi descuento o mis costos, recalcula todo y avísame qué cambió.`);
+  return L.join("\n");
+}
+
+// ===== Resultados =====
+function renderResults(){
+  const R = compute();
+  const plan = connectionPlan(R);
+  const prompt = buildPrompt(R);
+  const live = R.A.plan !== "gratis";
+  let warn = "";
+  if (!(R.promo.m > 0)) warn = `<div class="honest"><b>Ojo:</b> con estos números pierdes dinero en cada pedido aun sin anuncios (margen de ${pct(R.promo.m)}). Antes de pautar, revisa tu descuento o tus costos.</div>`;
+  else if (!R.obj) warn = `<div class="honest"><b>Ojo:</b> con ${Math.round(R.d * 100)}% de descuento tu margen (${pct(R.promo.m)}) no alcanza para ${Math.round(R.u * 100)}% de utilidad. Baja el descuento o la utilidad esperada.</div>`;
+  const budgetMsg = R.budget && R.maxSpend ? (R.budget > R.maxSpend
+      ? `<div class="honest"><b>Tu presupuesto no cabe:</b> planeas gastar ${money(R.budget)} en Meta, pero para no perder dinero con tu meta el máximo es ${money(R.maxSpend)}. O sube la meta de tu tienda en línea, o baja el gasto.</div>`
+      : R.objSpend && R.budget > R.objSpend
+        ? `<div class="callout">Tu presupuesto de ${money(R.budget)} cabe en tu punto de equilibrio, pero para quedarte con tu utilidad no debería pasar de ${money(R.objSpend)}.</div>`
+        : `<div class="callout">Tu presupuesto de ${money(R.budget)} cabe en tus números: con tu meta podrías gastar hasta ${money(R.objSpend)} y quedarte con tu utilidad.</div>`) : "";
+  const lyMsg = R.ly ? `<p class="hint" style="margin-top:8px">Tu meta es ${pct(R.meta / R.ly - 1).replace(/^(?!-)/, "+")} vs el Buen Fin 2025 (${money(R.ly)}).</p>` : "";
+
+  $("#results").innerHTML = `
+    <div class="mono">Listo, ${esc(R.A.marca)}</div>
+    <h2>Tus números para <span class="blue">Buen Fin</span></h2>
+    <p class="sub">Calculados con lo que contestaste. Claude los revisa con tus datos reales en el primer paso.</p>
+    ${warn}
+    <div class="nums">
+      <div class="num dark"><div class="l">ROAS de piso</div><div class="v">${x2(R.piso)}</div><div class="s">abajo de esto pierdes dinero</div></div>
+      <div class="num dark"><div class="l">ROAS objetivo</div><div class="v">${R.obj ? x2(R.obj) : "—"}</div><div class="s">para quedarte con ${Math.round(R.u * 100)}% de utilidad</div></div>
+      <div class="num"><div class="l">Gasto máximo en Meta</div><div class="v">${money(R.objSpend)}</div><div class="s">con tu meta y tu utilidad · equilibrio: ${money(R.maxSpend)}</div></div>
+    </div>
+    ${R.d > 0 && R.piso0 && R.piso ? `<div class="callout">Tu descuento de ${Math.round(R.d * 100)}% sube tu piso de ${x2(R.piso0)} a ${x2(R.piso)}. En Buen Fin necesitas anuncios más eficientes que el resto del año para ganar lo mismo.</div>` : ""}
+    <p class="hint">Estos ROAS son sobre venta sin IVA. Lo que reporta Meta incluye IVA: compáralo contra ${x2(R.piso * (1 + IVA))} de piso y ${R.obj ? x2(R.obj * (1 + IVA)) : "—"} de objetivo.</p>
+    ${budgetMsg}
+
+    <div class="sec">
+      <h3>Tu meta por día</h3>
+      <table><thead><tr><th>Día</th><th class="r">Objetivo (con IVA)</th></tr></thead>
+      <tbody>${R.daily.map(x => `<tr><td>${x.dow} ${Number(x.d.slice(8))}</td><td class="r">${money(x.meta)}</td></tr>`).join("")}
+      <tr><td><b>Total</b></td><td class="r"><b>${money(R.daily.reduce((s, x) => s + x.meta, 0))}</b></td></tr></tbody></table>
+      <p class="hint" style="margin-top:8px">Repartida con una curva típica de Buen Fin: arranque fuerte, valle a mitad y repunte al cierre. Si tienes tu historial, Claude la ajusta.</p>
+      ${lyMsg}
+    </div>
+
+    <div class="sec">
+      <h3>Cómo se van a conectar tus datos</h3>
+      <table><thead><tr><th>Dato</th><th>Cómo</th><th>¿Se actualiza solo?</th></tr></thead>
+      <tbody>${plan.map(p => `<tr><td><b>${esc(p.q)}</b></td><td>${esc(p.how)}</td><td>${p.fixed ? '<span class="pill">Una vez</span>' : p.live ? `<span class="pill live">${p.maybe ? "Si llega a Shopify" : "Sí"}</span>` : '<span class="pill manual">Tú lo subes</span>'}</td></tr>`).join("")}</tbody></table>
+      ${live ? "" : `<div class="honest"><b>Con el plan gratis</b> el tablero no se actualiza solo: cada día le escribes a Claude "actualiza mi tablero". Si tienes Pro, se actualiza al abrirlo.</div>`}
+    </div>
+
+    <div class="sec">
+      <h3>Tu prompt maestro</h3>
+      <div class="copyrow"><button type="button" class="btn" id="copy">Copiar prompt</button><span id="copied" class="ok" aria-live="polite"></span></div>
+      <textarea id="prompt" readonly>${esc(prompt)}</textarea>
+    </div>
+
+    <div class="sec">
+      <h3>Qué haces con él (20 a 30 minutos la primera vez)</h3>
+      <ol class="steps">
+        <li>En <b>claude.ai</b>, crea un <b>Proyecto</b> nuevo llamado "Tablero Buen Fin".</li>
+        <li>Pega el prompt en las <b>instrucciones del proyecto</b>.</li>
+        <li>Conecta lo que diga tu tabla de arriba: en Claude, <b>Personalizar → Conectores</b>. Lo que no tenga conector, lo exportas y lo subes al proyecto.</li>
+        <li>Abre un chat dentro del proyecto y escribe: <b>"Empecemos por el paso 1"</b>. Claude revisa tus conexiones, tus números y luego arma el tablero.</li>
+        <li>${live ? "La primera vez que abras el tablero, Claude te pide permiso para usar tus conectores. Acepta. Después, cada día solo lo abres." : "Cada día del evento abre un chat en el proyecto y escribe \"actualiza mi tablero\"."}</li>
+      </ol>
+      <div class="honest"><b>Límites que debes saber:</b> el tablero es tan bueno como tus datos. Si tu tienda no tiene costos capturados o tus anuncios no llevan UTM, Claude te lo va a decir y tendrás que completarlo. El conector oficial de Meta está en beta y puede no estar disponible para tu cuenta todavía; para eso está el plan B. Y la decisión de subir o bajar presupuesto sigue siendo tuya: el tablero te dice qué dicen los números, no conoce tu stock ni tus márgenes por producto.</div>
+    </div>
+
+    <div class="cta">
+      <h3>Esto es una parte de cómo <span class="blue">operamos</span> marcas.</h3>
+      <p>En Operando Marcas compartimos los sistemas, los tableros y los números reales con los que operamos marcas de e-commerce en México. Si este te sirvió, ahí está el resto.</p>
+      <a class="btn" href="${COMMUNITY_URL}" target="_blank" rel="noopener">Prueba la comunidad gratis</a>
+    </div>
+
+    <div class="nav"><button type="button" class="btn-ghost" id="edit">Cambiar mis respuestas</button></div>
+  `;
+  $("#wizard").classList.add("hidden");
+  $("#results").classList.remove("hidden");
+  window.scrollTo({ top: $("#results").offsetTop - 20, behavior: "smooth" });
+  $("#copy").addEventListener("click", async () => {
+    const ta = $("#prompt");
+    try { await navigator.clipboard.writeText(ta.value); $("#copied").textContent = "Copiado ✓"; }
+    catch(e){ ta.focus(); ta.select(); $("#copied").textContent = "Selecciónalo y cópialo con Cmd/Ctrl + C"; }
+  });
+  $("#edit").addEventListener("click", () => { $("#results").classList.add("hidden"); $("#wizard").classList.remove("hidden"); show(0); });
+}
+
+load();
+show(0);
+</script>
+</body>
+</html>
